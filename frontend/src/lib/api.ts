@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Clean trailing slashes
+apiUrl = apiUrl.replace(/\/+$/, '');
+// Ensure it ends with /api in case the user provided just the backend root URL
+if (!apiUrl.endsWith('/api')) {
+  apiUrl += '/api';
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: apiUrl,
   withCredentials: true, // Crucial for sending HttpOnly cookies
 });
 
