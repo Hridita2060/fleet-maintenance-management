@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import vehicleRoutes from './routes/vehicle';
 import serviceRecordRoutes from './routes/serviceRecord';
+import userRoutes from './routes/user';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/service-records', serviceRecordRoutes);
+app.use('/api/users', userRoutes);
 
 // Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
