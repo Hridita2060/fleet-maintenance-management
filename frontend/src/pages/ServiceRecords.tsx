@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { format } from 'date-fns';
+import { BookServiceModal } from '../components/serviceRecords/BookServiceModal';
+import { AuditTimeline } from '../components/serviceRecords/AuditTimeline';
 
 interface ServiceRecord {
   id: string;
@@ -23,6 +25,8 @@ export const ServiceRecords = () => {
   const { user } = useAuth();
   const [records, setRecords] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookingRecordId, setBookingRecordId] = useState<string | null>(null);
+  const [auditRecordId, setAuditRecordId] = useState<string | null>(null);
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -93,11 +97,7 @@ export const ServiceRecords = () => {
                 
                 <div className="flex flex-col gap-2 min-w-[120px]">
                   {record.status === 'DUE' && user?.role === 'MANAGER' && (
-                    <Button size="sm" onClick={() => {
-                      const date = prompt('Enter scheduled date (YYYY-MM-DD):');
-                      // Need tech assignment first but for simplicity here
-                      if (date) handleUpdateStatus(record.id, 'BOOKED', { scheduledDate: new Date(date).toISOString() });
-                    }}>Book Service</Button>
+                    <Button size="sm" onClick={() => setBookingRecordId(record.id)}>Book Service</Button>
                   )}
                   {record.status === 'BOOKED' && (
                     <Button size="sm" onClick={() => handleUpdateStatus(record.id, 'IN_SERVICE')}>Start Service</Button>
@@ -108,8 +108,20 @@ export const ServiceRecords = () => {
                       if (odo) handleUpdateStatus(record.id, 'COMPLETED', { completionOdometer: parseInt(odo) });
                     }}>Complete</Button>
                   )}
+                  <Button size="sm" variant="outline" onClick={() => setAuditRecordId(record.id)}>View History</Button>
                 </div>
               </div>
+              
+              {/* Show inline timeline if requested */}
+              {auditRecordId === record.id && (
+                <div className="mt-6 pt-6 border-t border-slate-100">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-semibold text-slate-900">Audit History</h4>
+                    <Button variant="ghost" size="sm" onClick={() => setAuditRecordId(null)}>Close</Button>
+                  </div>
+                  <AuditTimeline recordId={record.id} />
+                </div>
+              )}
             </div>
           ))}
           {records.length === 0 && (
@@ -118,6 +130,17 @@ export const ServiceRecords = () => {
             </div>
           )}
         </div>
+      )}
+
+      {bookingRecordId && (
+        <BookServiceModal 
+          recordId={bookingRecordId} 
+          onClose={() => setBookingRecordId(null)}
+          onSuccess={() => {
+            setBookingRecordId(null);
+            fetchRecords();
+          }}
+        />
       )}
     </div>
   );

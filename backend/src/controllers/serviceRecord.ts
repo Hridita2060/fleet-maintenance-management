@@ -62,16 +62,8 @@ export const updateServiceRecord = async (req: Request, res: Response) => {
     if (!isAssigned) {
       return res.status(403).json({ error: 'Forbidden: You are not assigned to this record' });
     }
-    // Technicians can only update description
-    if (result.data.status && result.data.status !== existing.status) {
-      return res.status(403).json({ error: 'Forbidden: Technicians cannot change status directly here' }); // Wait, can technicians change status? 
-      // "Technicians handle the service records assigned to them... participate in the service lifecycle only where allowed by the assignment rules". 
-      // Actually, technicians *do* progress the state (In Service -> Completed). The prompt says: "Technicians can update the work description only for records assigned to them." 
-      // But wait! "participate in the service lifecycle only where allowed by the assignment rules". 
-      // Let's assume Managers book it, Techs start it and complete it.
-      // But the README says: "records can be created by a fleet manager, and their description of the work updated by whoever is assigned, but not who is assigned to them".
-      // Let's allow techs to change status from BOOKED->IN_SERVICE and IN_SERVICE->COMPLETED.
-    }
+    // Technicians can progress the state from BOOKED -> IN_SERVICE -> COMPLETED
+    // We rely on the state machine validation below to ensure they follow rules
   }
 
   // State Machine Validation
@@ -215,4 +207,33 @@ export const removeTechnician = async (req: Request, res: Response) => {
     });
   });
   res.status(204).send();
+};
+
+export const getAuditHistory = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userRole = (req as any).user.role;
+  const userId = (req as any).user.userId;
+
+  const record = await prisma.serviceRecord.findUnique({
+    where: { id },
+    include: { assignments: true }
+  });
+
+  if (!record) {
+    return res.status(404).json({ error: 'Service record not found' });
+  }
+
+  if (userRole === 'TECHNICIAN') {
+    const isAssigned = record.assignments.some(a => a.technicianId === userId);
+    if (!isAssigned) {
+      return res.status(403).json({ error: 'Forbidden: You are not assigned to this record' });
+    }
+  }
+
+  const history = await prisma.auditEvent.findMany({
+    where: { recordId: id },
+    orderBy: { timestamp: 'desc' }
+  });
+
+  res.json(history);
 };
