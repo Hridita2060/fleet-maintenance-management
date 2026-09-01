@@ -14,13 +14,16 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({ 
-  origin: (origin, callback) => {
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Dynamically reflect the origin to prevent trailing-slash or subdomain mismatch issues on Render
-    callback(null, origin || true);
-  }, 
-  credentials: true 
-}));
+    callback(null, origin ? true : true);
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
