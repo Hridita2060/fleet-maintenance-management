@@ -1,0 +1,93 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String              @id @default(uuid())
+  email        String              @unique
+  passwordHash String
+  role         Role                @default(TECHNICIAN)
+  assignments  ServiceAssignment[]
+}
+
+enum Role {
+  MANAGER
+  TECHNICIAN
+}
+
+model Vehicle {
+  id               String          @id @default(uuid())
+  registration     String          @unique
+  make             String
+  model            String
+  currentOdometer  Int
+  dateIntervalDays Int
+  mileageInterval  Int
+  isArchived       Boolean         @default(false)
+  serviceRecords   ServiceRecord[]
+  alerts           Alert[]
+}
+
+model ServiceRecord {
+  id                 String              @id @default(uuid())
+  vehicleId          String
+  vehicle            Vehicle             @relation(fields: [vehicleId], references: [id])
+  description        String
+  status             Status              @default(DUE)
+  scheduledDate      DateTime?
+  completionDate     DateTime?
+  completionOdometer Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  assignments        ServiceAssignment[]
+  auditEvents        AuditEvent[]
+}
+
+enum Status {
+  DUE
+  BOOKED
+  IN_SERVICE
+  COMPLETED
+}
+
+model ServiceAssignment {
+  recordId     String
+  technicianId String
+  record       ServiceRecord @relation(fields: [recordId], references: [id])
+  technician   User          @relation(fields: [technicianId], references: [id])
+
+  @@id([recordId, technicianId])
+}
+
+model AuditEvent {
+  id        String        @id @default(uuid())
+  recordId  String
+  record    ServiceRecord @relation(fields: [recordId], references: [id])
+  userId    String?
+  action    ActionType
+  oldValue  String?
+  newValue  String?
+  timestamp DateTime      @default(now())
+}
+
+enum ActionType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  NOTE_ADDED
+}
+
+model Alert {
+  id              String   @id @default(uuid())
+  vehicleId       String
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  serviceRecordId String
+  isDismissed     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
