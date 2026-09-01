@@ -8,7 +8,6 @@ import vehicleRoutes from './routes/vehicle';
 import serviceRecordRoutes from './routes/serviceRecord';
 import dashboardRoutes from './routes/dashboard';
 import userRoutes from './routes/user';
-import { setupSwagger } from './swagger';
 
 dotenv.config();
 
@@ -18,8 +17,6 @@ const port = process.env.PORT || 3000;
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
-
-setupSwagger(app);
 
 // Routes
 app.use('/api/auth', authRoutes);
