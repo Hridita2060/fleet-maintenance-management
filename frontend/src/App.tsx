@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Vehicles } from './pages/Vehicles';
+import { ServiceRecords } from './pages/ServiceRecords';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -20,7 +21,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<div>Dashboard Home</div>} />
         <Route path="vehicles" element={<Vehicles />} />
-        <Route path="service-records" element={<div>Service Records</div>} />
+        <Route path="service-records" element={<ServiceRecords />} />
       </Route>
     </Routes>
   );

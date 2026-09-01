@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Truck, LayoutDashboard, CalendarClock, LogOut } from 'lucide-react';
