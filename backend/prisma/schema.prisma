@@ -46,6 +46,7 @@ model ServiceRecord {
   updatedAt          DateTime            @updatedAt
   assignments        ServiceAssignment[]
   auditEvents        AuditEvent[]
+  alerts             Alert[]
 }
 
 enum Status {
@@ -84,10 +85,11 @@ enum ActionType {
 }
 
 model Alert {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   vehicleId       String
-  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicle         Vehicle       @relation(fields: [vehicleId], references: [id])
   serviceRecordId String
-  isDismissed     Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  serviceRecord   ServiceRecord @relation(fields: [serviceRecordId], references: [id])
+  isDismissed     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
 }
