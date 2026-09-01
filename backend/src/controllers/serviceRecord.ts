@@ -149,6 +149,11 @@ export const getServiceRecords = async (req: Request, res: Response) => {
   const skip = (Number(page) - 1) * Number(pageSize);
   const take = Number(pageSize);
 
+  // Validate sort field to prevent injection
+  const validSortFields = ['createdAt', 'scheduledDate', 'completionDate', 'status'];
+  const safeSortBy = validSortFields.includes(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
   const where: any = {};
   if (vehicleId) where.vehicleId = vehicleId;
   if (status) where.status = status;
@@ -166,13 +171,15 @@ export const getServiceRecords = async (req: Request, res: Response) => {
       where,
       skip,
       take,
-      orderBy: { [String(sortBy)]: sortOrder },
+      orderBy: { [safeSortBy]: safeSortOrder },
       include: { vehicle: true, assignments: { include: { technician: true } } }
     }),
     prisma.serviceRecord.count({ where })
   ]);
 
-  res.json({ records, pagination: { total, page: Number(page), pageSize: take } });
+  const totalPages = Math.ceil(total / take);
+
+  res.json({ records, pagination: { total, page: Number(page), pageSize: take, totalPages } });
 };
 
 export const assignTechnician = async (req: Request, res: Response) => {
@@ -236,4 +243,51 @@ export const getAuditHistory = async (req: Request, res: Response) => {
   });
 
   res.json(history);
+};
+
+import { stringify } from 'csv-stringify/sync';
+
+export const exportServiceRecordsCsv = async (req: Request, res: Response) => {
+  const { search, vehicleId, status, technicianId, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+  const userRole = (req as any).user.role;
+  const userId = (req as any).user.userId;
+
+  const validSortFields = ['createdAt', 'scheduledDate', 'completionDate', 'status'];
+  const safeSortBy = validSortFields.includes(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+  const where: any = {};
+  if (vehicleId) where.vehicleId = vehicleId;
+  if (status) where.status = status;
+  if (search) where.description = { contains: String(search), mode: 'insensitive' };
+  
+  if (technicianId) {
+    where.assignments = { some: { technicianId: String(technicianId) } };
+  } else if (userRole === 'TECHNICIAN') {
+    where.assignments = { some: { technicianId: userId } };
+  }
+
+  // Large datasets are fetched here server-side, no limit for CSV export (or could chunk if very large, but this is fine for typical use)
+  const records = await prisma.serviceRecord.findMany({
+    where,
+    orderBy: { [safeSortBy]: safeSortOrder },
+    include: { vehicle: true, assignments: { include: { technician: true } } }
+  });
+
+  const data = records.map(r => ({
+    Record_ID: r.id,
+    Vehicle_Registration: r.vehicle.registration,
+    Status: r.status,
+    Description: r.description,
+    Scheduled_Date: r.scheduledDate ? new Date(r.scheduledDate).toISOString() : '',
+    Completion_Date: r.completionDate ? new Date(r.completionDate).toISOString() : '',
+    Completion_Odometer: r.completionOdometer ?? '',
+    Assigned_Technicians: r.assignments.map(a => a.technician.email).join('; ')
+  }));
+
+  const csv = stringify(data, { header: true });
+  
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="service_records.csv"');
+  res.send(csv);
 };

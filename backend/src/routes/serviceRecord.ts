@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { getServiceRecords, createServiceRecord, updateServiceRecord, assignTechnician, removeTechnician, getAuditHistory } from '../controllers/serviceRecord';
+import { getServiceRecords, createServiceRecord, updateServiceRecord, assignTechnician, removeTechnician, getAuditHistory, exportServiceRecordsCsv } from '../controllers/serviceRecord';
 import { authenticate, requireManager } from '../middlewares/auth';
 
 const router = Router();
 
+router.get('/export', authenticate, exportServiceRecordsCsv);
 router.get('/', authenticate, getServiceRecords);
 router.post('/', authenticate, requireManager, createServiceRecord);
 router.patch('/:id', authenticate, updateServiceRecord);

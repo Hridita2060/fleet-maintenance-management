@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { format } from 'date-fns';
+import { Download, Search } from 'lucide-react';
 import { BookServiceModal } from '../components/serviceRecords/BookServiceModal';
 import { AuditTimeline } from '../components/serviceRecords/AuditTimeline';
 
@@ -28,11 +29,20 @@ export const ServiceRecords = () => {
   const [bookingRecordId, setBookingRecordId] = useState<string | null>(null);
   const [auditRecordId, setAuditRecordId] = useState<string | null>(null);
 
+  // Search, Filters, Pagination
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/service-records');
+      const res = await api.get('/service-records', {
+        params: { search, status, page, pageSize: 10 }
+      });
       setRecords(res.data.records);
+      setTotalPages(res.data.pagination.totalPages || 1);
     } catch (error) {
       console.error('Failed to fetch records', error);
     } finally {
@@ -42,7 +52,24 @@ export const ServiceRecords = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [page, status, search]); // Simple debounce could be added for search
+
+  const handleExport = async () => {
+    try {
+      const res = await api.get('/service-records/export', {
+        params: { search, status },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'service_records.csv');
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      console.error('Export failed', err);
+    }
+  };
 
   const handleUpdateStatus = async (id: string, newStatus: string, payload: any = {}) => {
     try {
@@ -66,10 +93,36 @@ export const ServiceRecords = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Service Records</h1>
           <p className="text-sm text-slate-500">Manage vehicle maintenance and lifecycle states.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <input 
+              type="text" 
+              placeholder="Search records..." 
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              className="h-9 w-64 rounded-md border border-slate-200 pl-9 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+            />
+          </div>
+          <select 
+            className="h-9 rounded-md border border-slate-200 px-3 text-sm"
+            value={status}
+            onChange={e => { setStatus(e.target.value); setPage(1); }}
+          >
+            <option value="">All Statuses</option>
+            <option value="DUE">Due</option>
+            <option value="BOOKED">Booked</option>
+            <option value="IN_SERVICE">In Service</option>
+            <option value="COMPLETED">Completed</option>
+          </select>
+          <Button variant="outline" onClick={handleExport} className="h-9">
+            <Download className="h-4 w-4 mr-2" /> Export
+          </Button>
         </div>
       </div>
 
@@ -127,6 +180,14 @@ export const ServiceRecords = () => {
           {records.length === 0 && (
             <div className="text-center py-12 text-slate-500 border border-dashed rounded-md bg-slate-50">
               No service records found.
+            </div>
+          )}
+          
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+              <span className="text-sm text-slate-600">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
             </div>
           )}
         </div>

@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { VehicleForm } from '../components/vehicles/VehicleForm';
+import { BulkImportModal } from '../components/vehicles/BulkImportModal';
+import { Upload } from 'lucide-react';
 
 interface Vehicle {
   id: string;
@@ -21,6 +23,7 @@ export const Vehicles = () => {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
 
   const fetchVehicles = async () => {
@@ -75,7 +78,16 @@ export const Vehicles = () => {
             />
             Show Archived
           </label>
-          <Button onClick={handleAdd}>Add Vehicle</Button>
+          <div className="flex gap-2">
+            {user?.role === 'MANAGER' && (
+              <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                <Upload className="h-4 w-4 mr-2" /> Bulk Odometer
+              </Button>
+            )}
+            {user?.role === 'MANAGER' && (
+              <Button onClick={handleAdd}>Add Vehicle</Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -136,6 +148,12 @@ export const Vehicles = () => {
           initialData={selectedVehicle}
           onClose={() => setIsModalOpen(false)}
           onSuccess={handleSuccess}
+        />
+      )}
+      {showImportModal && (
+        <BulkImportModal 
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => fetchVehicles()}
         />
       )}
     </div>
