@@ -18,8 +18,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Redirect to login if not authenticated
-      window.location.href = '/login';
+      // Don't redirect on the session-check call — AuthContext handles that gracefully.
+      // Don't redirect if we're already on /login — prevents an infinite reload loop.
+      const requestUrl = error.config?.url || '';
+      const isSessionCheck = requestUrl.includes('/auth/me');
+      const isAlreadyOnLogin = window.location.pathname === '/login';
+
+      if (!isSessionCheck && !isAlreadyOnLogin) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
