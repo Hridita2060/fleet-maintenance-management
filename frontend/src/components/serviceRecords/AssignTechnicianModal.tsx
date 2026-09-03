@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import api from '../../lib/api';
 import { Button } from '../ui/Button';
 
@@ -12,16 +12,12 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
   existingTechIds: string[];
+  techs: User[];
 }
 
-export const AssignTechnicianModal = ({ recordId, onClose, onSuccess, existingTechIds }: Props) => {
-  const [techs, setTechs] = useState<User[]>([]);
+export const AssignTechnicianModal = ({ recordId, onClose, onSuccess, existingTechIds, techs }: Props) => {
   const [selectedTech, setSelectedTech] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    api.get('/users?role=TECHNICIAN').then(res => setTechs(res.data));
-  }, []);
 
   const availableTechs = techs.filter(t => !existingTechIds.includes(t.id));
 

@@ -308,6 +308,7 @@ export const ServiceRecords = () => {
         <AssignTechnicianModal 
           recordId={assignRecord.id}
           existingTechIds={assignRecord.existingTechs}
+          techs={technicians}
           onClose={() => setAssignRecord(null)}
           onSuccess={() => {
             setAssignRecord(null);
