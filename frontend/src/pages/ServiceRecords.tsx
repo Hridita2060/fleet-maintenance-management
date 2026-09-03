@@ -3,9 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { format } from 'date-fns';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, Plus } from 'lucide-react';
 import { BookServiceModal } from '../components/serviceRecords/BookServiceModal';
 import { AuditTimeline } from '../components/serviceRecords/AuditTimeline';
+import { AssignTechnicianModal } from '../components/serviceRecords/AssignTechnicianModal';
 
 interface ServiceRecord {
   id: string;
@@ -28,6 +29,7 @@ export const ServiceRecords = () => {
   const [loading, setLoading] = useState(true);
   const [bookingRecordId, setBookingRecordId] = useState<string | null>(null);
   const [auditRecordId, setAuditRecordId] = useState<string | null>(null);
+  const [assignRecord, setAssignRecord] = useState<{ id: string, existingTechs: string[] } | null>(null);
 
   // Search, Filters, Pagination
   const [search, setSearch] = useState('');
@@ -171,6 +173,15 @@ export const ServiceRecords = () => {
                           </span>
                         ))
                       )}
+                      {user?.role === 'MANAGER' && record.status !== 'COMPLETED' && (
+                        <button
+                          onClick={() => setAssignRecord({ id: record.id, existingTechs: record.assignments.map(a => a.technicianId) })}
+                          className="inline-flex items-center justify-center rounded-full bg-blue-50 p-1 text-blue-600 hover:bg-blue-100 focus:outline-none"
+                          title="Assign technician"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                     {record.scheduledDate && <p>Scheduled: {format(new Date(record.scheduledDate), 'MMM d, yyyy')}</p>}
                     {record.completionDate && <p>Completed: {format(new Date(record.completionDate), 'MMM d, yyyy')}</p>}
@@ -228,6 +239,18 @@ export const ServiceRecords = () => {
           onClose={() => setBookingRecordId(null)}
           onSuccess={() => {
             setBookingRecordId(null);
+            fetchRecords();
+          }}
+        />
+      )}
+
+      {assignRecord && (
+        <AssignTechnicianModal 
+          recordId={assignRecord.id}
+          existingTechIds={assignRecord.existingTechs}
+          onClose={() => setAssignRecord(null)}
+          onSuccess={() => {
+            setAssignRecord(null);
             fetchRecords();
           }}
         />
