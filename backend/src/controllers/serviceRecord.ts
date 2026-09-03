@@ -91,6 +91,12 @@ export const updateServiceRecord = async (req: Request, res: Response) => {
       }
     }
 
+    if (newStatus === Status.IN_SERVICE) {
+      if (existing.assignments.length === 0) {
+        return res.status(400).json({ error: 'Technician assignment is required to start service' });
+      }
+    }
+
     if (newStatus === Status.COMPLETED) {
       if (!result.data.completionOdometer && !existing.completionOdometer) {
         return res.status(400).json({ error: 'Completion odometer is required to complete' });
