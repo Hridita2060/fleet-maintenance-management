@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../lib/api';
 import { Activity, AlertTriangle, CheckCircle, Clock, Truck, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Metrics {
   totalActiveVehicles: number;
@@ -10,6 +11,16 @@ interface Metrics {
   bookedServices: number;
   inServiceServices: number;
   completedServices: number;
+  technicianBreakdown: Array<{
+    technicianId: string;
+    technicianName: string;
+    assignedCount: number;
+  }>;
+  weeklyCompletions: Array<{
+    weekStart: string;
+    weekLabel: string;
+    count: number;
+  }>;
 }
 
 interface Alert {
@@ -121,6 +132,58 @@ export const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8">
+        {/* 8-Week Chart */}
+        <div className="rounded-xl border bg-white p-6 shadow flex flex-col">
+          <h2 className="text-xl font-semibold mb-4">Completed Services (Last 8 Weeks)</h2>
+          <div className="flex-1 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics?.weeklyCompletions || []}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="weekLabel" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dx={-10} />
+                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="count" name="Completed Services" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Technician Workload */}
+        <div className="rounded-xl border bg-white p-6 shadow flex flex-col">
+          <h2 className="text-xl font-semibold mb-4">Technician Workload</h2>
+          <div className="overflow-auto flex-1">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-slate-500 bg-slate-50 uppercase border-b">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Technician</th>
+                  <th className="px-4 py-3 font-medium text-right">Assigned Records</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics?.technicianBreakdown?.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-8 text-center text-slate-500">
+                      No technician data available.
+                    </td>
+                  </tr>
+                )}
+                {metrics?.technicianBreakdown?.map((tech) => (
+                  <tr key={tech.technicianId} className="border-b last:border-0 hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-medium text-slate-900">{tech.technicianName}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center justify-center bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        {tech.assignedCount}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4">Active Alerts</h2>

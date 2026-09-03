@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Status } from '@prisma/client';
 import { calculateDueStatus } from '../services/dueEngine';
+import { startOfWeek, subWeeks, format } from 'date-fns';
 
 const prisma = new PrismaClient();
 
@@ -51,11 +52,6 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
         vehicleId: v.id,
         serviceRecordId: status.activeRecord.id,
       });
-    } else if (status.isOverdue && !status.activeRecord) {
-      // It's overdue but no active record exists? We can't link an alert to a serviceRecord if it doesn't exist.
-      // So we count it as overdue, but wait - the prompt says "Associate alerts with the correct vehicle and service record."
-      // This implies an overdue alert ONLY exists if there's a ServiceRecord that is DUE.
-      // So we'll just require activeRecord.
     }
   }
 
@@ -71,6 +67,85 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
     }
   }
 
+  // --- New Feature: Technician Breakdown ---
+  const technicianBreakdown = [];
+  if (userRole === 'MANAGER') {
+    const technicians = await prisma.user.findMany({
+      where: { role: 'TECHNICIAN' },
+      select: {
+        id: true,
+        email: true,
+        _count: {
+          select: { assignments: true }
+        }
+      }
+    });
+    technicianBreakdown.push(...technicians.map(t => ({
+      technicianId: t.id,
+      technicianName: t.email,
+      assignedCount: t._count.assignments
+    })));
+  } else {
+    const tech = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        _count: {
+          select: { assignments: true }
+        }
+      }
+    });
+    if (tech) {
+      technicianBreakdown.push({
+        technicianId: tech.id,
+        technicianName: tech.email,
+        assignedCount: tech._count.assignments
+      });
+    }
+  }
+
+  // --- New Feature: 8-Week Completions Chart ---
+  const now = new Date();
+  const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday start
+  
+  const weeklyCompletions = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = subWeeks(currentWeekStart, i);
+    weeklyCompletions.push({
+      weekStart,
+      weekLabel: format(weekStart, 'MMM d'),
+      count: 0
+    });
+  }
+
+  const eightWeeksAgo = weeklyCompletions[0].weekStart;
+
+  const completedRecordsWhere: any = {
+    status: Status.COMPLETED,
+    completionDate: {
+      gte: eightWeeksAgo
+    }
+  };
+  if (userRole === 'TECHNICIAN') {
+    completedRecordsWhere.assignments = { some: { technicianId: userId } };
+  }
+
+  const completedRecords = await prisma.serviceRecord.findMany({
+    where: completedRecordsWhere,
+    select: { completionDate: true }
+  });
+
+  for (const record of completedRecords) {
+    if (record.completionDate) {
+      const recordWeekStart = startOfWeek(record.completionDate, { weekStartsOn: 1 });
+      const bucket = weeklyCompletions.find(b => b.weekStart.getTime() === recordWeekStart.getTime());
+      if (bucket) {
+        bucket.count++;
+      }
+    }
+  }
+
   res.json({
     totalActiveVehicles,
     servicesDue,
@@ -78,5 +153,7 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
     bookedServices,
     inServiceServices,
     completedServices,
+    technicianBreakdown,
+    weeklyCompletions
   });
 };
