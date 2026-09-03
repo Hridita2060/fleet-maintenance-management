@@ -176,10 +176,10 @@ export const ServiceRecords = () => {
                       {user?.role === 'MANAGER' && record.status !== 'COMPLETED' && (
                         <button
                           onClick={() => setAssignRecord({ id: record.id, existingTechs: record.assignments.map(a => a.technicianId) })}
-                          className="inline-flex items-center justify-center rounded-full bg-blue-50 p-1 text-blue-600 hover:bg-blue-100 focus:outline-none"
-                          title="Assign technician"
+                          className="ml-2 inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-100 focus:outline-none"
+                          title="Assign another technician"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3 w-3" /> Assign Tech
                         </button>
                       )}
                     </div>
