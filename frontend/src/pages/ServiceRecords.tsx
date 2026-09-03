@@ -141,8 +141,37 @@ export const ServiceRecords = () => {
                     <StatusBadge status={record.status} />
                   </div>
                   <p className="text-sm text-slate-600 mb-4">{record.description}</p>
-                  <div className="text-sm text-slate-500 space-y-1">
-                    <p>Assigned Techs: {record.assignments.map(a => a.technician.email).join(', ') || 'None'}</p>
+                  <div className="text-sm text-slate-500 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>Assigned Techs:</span>
+                      {record.assignments.length === 0 ? (
+                        <span>None</span>
+                      ) : (
+                        record.assignments.map((a) => (
+                          <span key={a.technicianId} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+                            {a.technician.email}
+                            {user?.role === 'MANAGER' && (
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Remove ${a.technician.email} from this record?`)) {
+                                    try {
+                                      await api.delete(`/service-records/${record.id}/assignments/${a.technicianId}`);
+                                      fetchRecords();
+                                    } catch (err: any) {
+                                      alert(err.response?.data?.error || 'Failed to remove technician');
+                                    }
+                                  }
+                                }}
+                                className="ml-1 text-slate-400 hover:text-red-500 focus:outline-none"
+                                title="Remove technician"
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </span>
+                        ))
+                      )}
+                    </div>
                     {record.scheduledDate && <p>Scheduled: {format(new Date(record.scheduledDate), 'MMM d, yyyy')}</p>}
                     {record.completionDate && <p>Completed: {format(new Date(record.completionDate), 'MMM d, yyyy')}</p>}
                   </div>
