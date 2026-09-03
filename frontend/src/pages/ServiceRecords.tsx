@@ -37,11 +37,27 @@ export const ServiceRecords = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const [vehicleId, setVehicleId] = useState('');
+  const [technicianId, setTechnicianId] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  // Lists for dropdowns
+  const [vehicles, setVehicles] = useState<{id: string, registration: string}[]>([]);
+  const [technicians, setTechnicians] = useState<{id: string, email: string}[]>([]);
+
+  useEffect(() => {
+    api.get('/vehicles').then(res => setVehicles(res.data));
+    if (user?.role === 'MANAGER') {
+      api.get('/users?role=TECHNICIAN').then(res => setTechnicians(res.data));
+    }
+  }, [user?.role]);
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
       const res = await api.get('/service-records', {
-        params: { search, status, page, pageSize: 10 }
+        params: { search, status, vehicleId, technicianId, sortBy, sortOrder, page, pageSize: 10 }
       });
       setRecords(res.data.records);
       setTotalPages(res.data.pagination.totalPages || 1);
@@ -54,12 +70,12 @@ export const ServiceRecords = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, [page, status, search]); // Simple debounce could be added for search
+  }, [page, status, search, vehicleId, technicianId, sortBy, sortOrder]);
 
   const handleExport = async () => {
     try {
       const res = await api.get('/service-records/export', {
-        params: { search, status },
+        params: { search, status, vehicleId, technicianId, sortBy, sortOrder },
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -95,36 +111,80 @@ export const ServiceRecords = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Service Records</h1>
           <p className="text-sm text-slate-500">Manage vehicle maintenance and lifecycle states.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-            <input 
-              type="text" 
-              placeholder="Search records..." 
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="h-9 w-64 rounded-md border border-slate-200 pl-9 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
-            />
+        <div className="flex flex-col gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-grow md:flex-grow-0">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+              <input 
+                type="text" 
+                placeholder="Search description..." 
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="h-9 w-full md:w-64 rounded-md border border-slate-200 pl-9 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+              />
+            </div>
+            <select 
+              className="h-9 rounded-md border border-slate-200 px-3 text-sm"
+              value={status}
+              onChange={e => { setStatus(e.target.value); setPage(1); }}
+            >
+              <option value="">All Statuses</option>
+              <option value="DUE">Due</option>
+              <option value="BOOKED">Booked</option>
+              <option value="IN_SERVICE">In Service</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+            <select 
+              className="h-9 rounded-md border border-slate-200 px-3 text-sm max-w-[200px] truncate"
+              value={vehicleId}
+              onChange={e => { setVehicleId(e.target.value); setPage(1); }}
+            >
+              <option value="">All Vehicles</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.registration}</option>)}
+            </select>
+            {user?.role === 'MANAGER' && (
+              <select 
+                className="h-9 rounded-md border border-slate-200 px-3 text-sm max-w-[200px] truncate"
+                value={technicianId}
+                onChange={e => { setTechnicianId(e.target.value); setPage(1); }}
+              >
+                <option value="">All Technicians</option>
+                {technicians.map(t => <option key={t.id} value={t.id}>{t.email}</option>)}
+              </select>
+            )}
           </div>
-          <select 
-            className="h-9 rounded-md border border-slate-200 px-3 text-sm"
-            value={status}
-            onChange={e => { setStatus(e.target.value); setPage(1); }}
-          >
-            <option value="">All Statuses</option>
-            <option value="DUE">Due</option>
-            <option value="BOOKED">Booked</option>
-            <option value="IN_SERVICE">In Service</option>
-            <option value="COMPLETED">Completed</option>
-          </select>
-          <Button variant="outline" onClick={handleExport} className="h-9">
-            <Download className="h-4 w-4 mr-2" /> Export
-          </Button>
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-sm text-slate-500">Sort by:</span>
+            <select 
+              className="h-9 rounded-md border border-slate-200 px-3 text-sm"
+              value={sortBy}
+              onChange={e => { setSortBy(e.target.value); setPage(1); }}
+            >
+              <option value="createdAt">Last Updated</option>
+              <option value="scheduledDate">Scheduled Date</option>
+              <option value="completionDate">Completion Date</option>
+              <option value="status">Status</option>
+            </select>
+            <select 
+              className="h-9 rounded-md border border-slate-200 px-3 text-sm"
+              value={sortOrder}
+              onChange={e => { setSortOrder(e.target.value); setPage(1); }}
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+            
+            <div className="flex-grow"></div>
+            
+            <Button variant="outline" onClick={handleExport} className="h-9">
+              <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+          </div>
         </div>
       </div>
 
