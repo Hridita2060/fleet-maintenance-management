@@ -1,7 +1,5 @@
 # Submission
 
-Fill this in and commit it. This is the first file we open.
-
 ## Links
 
 - **GitHub repository:** https://github.com/Hridita2060/fleet-maintenance-management
